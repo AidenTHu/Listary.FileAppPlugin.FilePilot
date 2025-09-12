@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Listary.FileAppPlugin.WinRAR.ExtractDialog": {
+      "commandName": "Project"
+    },
+    "Profile 1": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Listary\\Listary.FileAppPlugin.DevTools.exe"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+﻿{
+  "ManifestVersion": 1,
+
+  "Id": "FilePilot",
+  "PluginType": "FileAppPlugin",
+  "PluginVersion": "0.1.1",
+  "DisplayName": "FilePilot",
+  "Authors": [ "Aiden Hu" ],
+  "Description": "Listary file application plugin for File Pilot.",
+  "Homepage": "https://github.com/AidenTHu/Listary.FileAppPlugin.FilePilot",
+  "Icon": "Icon.png",
+
+  "Api": "NetFramework",
+  "ApiVersion": 1,
+  "Entry": "Listary.FileAppPlugin.FilePilot.dll"
+}
