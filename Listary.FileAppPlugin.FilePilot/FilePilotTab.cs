@@ -5,10 +5,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace Listary.FileAppPlugin.FilePilot
-{
-    public class FilePilotTab : IFileTab, IGetFolder, IOpenFolder
-    {
+namespace Listary.FileAppPlugin.FilePilot {
+    public class FilePilotTab : IFileTab, IGetFolder, IOpenFolder {
         // Win32 API declarations
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -25,39 +23,32 @@ namespace Listary.FileAppPlugin.FilePilot
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
-        private int GetFileAndFolderCount(string folderPath)
-        {
-            try
-            {
-                if (!Directory.Exists(folderPath))
+        private int GetFileAndFolderCount(string folderPath) {
+            try {
+                if (!Directory.Exists(folderPath)) {
                     return 0;
+                }
 
                 int fileCount = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
                 int folderCount = Directory.GetDirectories(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
                 return fileCount + folderCount;
-            }
-            catch
-            {
+            } catch {
                 return 0;
             }
         }
 
-        public async Task<string> GetCurrentFolder()
-        {
+        public async Task<string> GetCurrentFolder() {
             // FilePilot does not expose the current folder via Windows Messages or Automation APIs.
             // Since there is no reliable way to get the current folder from File Pilot using SendKeys or MouseEvents, return null.
             return null;
         }
 
-        public async Task<bool> OpenFolder(string path)
-        {
+        public async Task<bool> OpenFolder(string path) {
             string originalClipboard = null;
             bool clipboardHasText = false;
-            try
-            {
+            try {
                 // Save the current clipboard content
-                if (System.Windows.Clipboard.ContainsText())
-                {
+                if (System.Windows.Clipboard.ContainsText()) {
                     originalClipboard = System.Windows.Clipboard.GetText();
                     clipboardHasText = true;
                 }
@@ -90,20 +81,16 @@ namespace Listary.FileAppPlugin.FilePilot
                 Keyboard.Type(VirtualKeyShort.RETURN);
 
                 // Restores the original clipboard content
-                if (clipboardHasText)
-                {
+                if (clipboardHasText) {
                     System.Windows.Clipboard.SetText(originalClipboard);
                 }
 
                 return true;
             }
-            catch (Exception)
-            {
+            catch (Exception) {
                 // Attempts to restore clipboard even on error
-                if (clipboardHasText)
-                {
-                    try
-                    {
+                if (clipboardHasText) {
+                    try {
                         System.Windows.Clipboard.SetText(originalClipboard);
                     }
                     catch { }
@@ -112,8 +99,7 @@ namespace Listary.FileAppPlugin.FilePilot
             }
         }
 
-        public void FocusFilePilotWindow(IntPtr hwnd)
-        {
+        public void FocusFilePilotWindow(IntPtr hwnd) {
             ShowWindow(hwnd, IsZoomed(hwnd) ? SW_MAXIMIZE : SW_SHOW);
             SetForegroundWindow(hwnd);
         }

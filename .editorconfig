@@ -1,0 +1,14 @@
+root = true
+
+# C# code style and formatting settings
+[*.cs]
+# Place open braces on the same line (K&R style) for all constructs
+csharp_new_line_before_open_brace = none
+
+# Optional: keep other common formatting sane (non-destructive)
+csharp_new_line_between_query_expression_clauses = true
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true
+
+# You can tweak severity as desired; keeping formatting non-blocking by default
+# dotnet_diagnostic.IDE0055.severity = suggestion

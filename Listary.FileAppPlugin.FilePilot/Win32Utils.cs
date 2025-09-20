@@ -6,15 +6,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Listary.FileAppPlugin.FilePilot
-
-{
-    internal static class Win32Utils
-    {
+namespace Listary.FileAppPlugin.FilePilot {
+    internal static class Win32Utils {
         public const int BM_CLICK = 0xF5;
 
-        private enum ProcessAccessFlags : uint
-        {
+        private enum ProcessAccessFlags : uint {
             All = 0x001F0FFF,
             Terminate = 0x00000001,
             CreateThread = 0x00000002,
@@ -30,8 +26,7 @@ namespace Listary.FileAppPlugin.FilePilot
             Synchronize = 0x00100000
         }
 
-        private enum WM : uint
-        {
+        private enum WM : uint {
             /// <summary>
             /// An application sends a WM_SETTEXT message to set the text of a window.
             /// </summary>
@@ -64,50 +59,41 @@ namespace Listary.FileAppPlugin.FilePilot
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool QueryFullProcessImageName([In] IntPtr hProcess, [In] int dwFlags, [Out] StringBuilder lpExeName, ref int lpdwSize);
 
-        public static string GetClassName(IntPtr hWnd)
-        {
+        public static string GetClassName(IntPtr hWnd) {
             var className = new StringBuilder(256);
             GetClassName(hWnd, className, className.Capacity);
             return className.ToString();
         }
 
-        public static string GetProcessPathFromHwnd(IntPtr hWnd)
-        {
+        public static string GetProcessPathFromHwnd(IntPtr hWnd) {
             GetWindowThreadProcessId(hWnd, out uint pid);
-            
+
             StringBuilder buffer = new StringBuilder(1024);
             IntPtr process = OpenProcess(ProcessAccessFlags.QueryLimitedInformation, false, (int)pid);
-            if (process != IntPtr.Zero)
-            {
-                try
-                {
+            if (process != IntPtr.Zero) {
+                try {
                     int size = buffer.Capacity;
-                    if (QueryFullProcessImageName(process, 0, buffer, ref size))
-                    {
+                    if (QueryFullProcessImageName(process, 0, buffer, ref size)) {
                         return buffer.ToString();
                     }
                 }
-                finally
-                {
+                finally {
                     CloseHandle(process);
                 }
             }
-            
+
             return string.Empty;
         }
-        
-        public static string GetWindowText(this IFileAppPluginHost host, IntPtr hWnd)
-        {
+
+        public static string GetWindowText(this IFileAppPluginHost host, IntPtr hWnd) {
             var buffer = new byte[1000];
-            if (host.SendMessage(hWnd, (uint)WM.GETTEXT, (IntPtr)buffer.Length, buffer) != IntPtr.Zero)
-            {
+            if (host.SendMessage(hWnd, (uint)WM.GETTEXT, (IntPtr)buffer.Length, buffer) != IntPtr.Zero) {
                 return Encoding.Unicode.GetString(buffer).TrimEnd('\0');
             }
             return string.Empty;
         }
 
-        public static bool SetWindowText(this IFileAppPluginHost host, IntPtr hWnd, string text)
-        {
+        public static bool SetWindowText(this IFileAppPluginHost host, IntPtr hWnd, string text) {
             // lParam should be a null-terminated string
             List<byte> bytes = new List<byte>();
             bytes.AddRange(Encoding.Unicode.GetBytes(text));
