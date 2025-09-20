@@ -3,6 +3,7 @@ using FlaUI.Core.Input;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Listary.FileAppPlugin.FilePilot
 {
@@ -23,6 +24,23 @@ namespace Listary.FileAppPlugin.FilePilot
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        private int GetFileAndFolderCount(string folderPath)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                    return 0;
+
+                int fileCount = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
+                int folderCount = Directory.GetDirectories(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
+                return fileCount + folderCount;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
 
         public async Task<string> GetCurrentFolder()
         {
@@ -53,15 +71,22 @@ namespace Listary.FileAppPlugin.FilePilot
                 Keyboard.Press(VirtualKeyShort.CONTROL);
                 Keyboard.Type(VirtualKeyShort.KEY_L);
                 Keyboard.Release(VirtualKeyShort.CONTROL);
-                await Task.Delay(5);
+
+                await Task.Delay(20);
 
                 // Pastes the path into the input box
                 Keyboard.Press(VirtualKeyShort.CONTROL);
                 Keyboard.Type(VirtualKeyShort.KEY_V);
                 Keyboard.Release(VirtualKeyShort.CONTROL);
 
-                // Presses enter to input the path. Wait till the file path is entered before pressing enter.
-                await Task.Delay(80);
+                // Calculate file and folder count and set delay using scaling factor
+                int fileAndFolderCount = GetFileAndFolderCount(path);
+                int baseDelay = 40;
+                double scaleFactor = 0.018;
+                int delayMs = baseDelay + (int)(fileAndFolderCount * scaleFactor);
+
+                await Task.Delay(delayMs);
+
                 Keyboard.Type(VirtualKeyShort.RETURN);
 
                 // Restores the original clipboard content
