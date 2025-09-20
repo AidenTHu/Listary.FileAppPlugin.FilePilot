@@ -63,7 +63,7 @@ namespace Listary.FileAppPlugin.FilePilot {
                 Keyboard.Type(VirtualKeyShort.KEY_L);
                 Keyboard.Release(VirtualKeyShort.CONTROL);
 
-                await Task.Delay(50);
+                await Task.Delay(20);
 
                 // Pastes the path into the input box
                 Keyboard.Press(VirtualKeyShort.CONTROL);
@@ -74,10 +74,12 @@ namespace Listary.FileAppPlugin.FilePilot {
                 int fileAndFolderCount = GetFileAndFolderCount(path);
                 int baseDelay = 40;
                 double scaleFactor = .018;
-                if (fileAndFolderCount > 50) {
-                    scaleFactor = 1;
+                if (fileAndFolderCount > 1000) {
+                    scaleFactor = .1;
                 } else if (fileAndFolderCount > 500) {
-                    scaleFactor = .5;
+                    scaleFactor = .7;
+                } else if (fileAndFolderCount > 50) {
+                    scaleFactor = 1;
                 }
 
                 int delayMs = baseDelay + (int)(fileAndFolderCount * scaleFactor);
