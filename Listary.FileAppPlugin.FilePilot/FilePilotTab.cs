@@ -20,6 +20,8 @@ namespace Listary.FileAppPlugin.FilePilot {
         private const int SW_SHOW = 5;
         private const int SW_MAXIMIZE = 3;
 
+        private static bool isFirstTime = true;
+
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
@@ -77,11 +79,16 @@ namespace Listary.FileAppPlugin.FilePilot {
                 if (fileAndFolderCount > 1000) {
                     scaleFactor = .1;
                 } else if (fileAndFolderCount > 500) {
-                    scaleFactor = .7;
+                    scaleFactor = .58  ;
                 } else if (fileAndFolderCount > 50) {
-                    scaleFactor = 1;
+                    scaleFactor = 1.3;
                 }
 
+                if (FilePilotTab.isFirstTime) {
+                    // First time opening a folder in File Pilot is slower, add extra delay
+                    baseDelay += 200;
+                    FilePilotTab.isFirstTime = false;
+                }
                 int delayMs = baseDelay + (int)(fileAndFolderCount * scaleFactor);
 
                 await Task.Delay(delayMs);
