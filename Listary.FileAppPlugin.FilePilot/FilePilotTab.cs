@@ -1,13 +1,15 @@
-﻿using FlaUI.Core.WindowsAPI;
-using FlaUI.Core.Input;
+﻿using FlaUI.Core.Input;
+using FlaUI.Core.WindowsAPI;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.IO;
-using System.Collections.Generic;
+using System.Windows.Shapes;
 
 namespace Listary.FileAppPlugin.FilePilot {
     public class FilePilotTab : IFileTab, IGetFolder, IOpenFolder {
+        public FilePilotTab(string path) { }
         // Win32 API declarations
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -21,26 +23,10 @@ namespace Listary.FileAppPlugin.FilePilot {
         private const int SW_SHOW = 5;
         private const int SW_MAXIMIZE = 3;
 
-        private static bool isFirstTime = true;
-
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
-        private static readonly HashSet<string> SeenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly string _path;
-
-        public FilePilotTab(string path) {
-            _path = path;
-            lock (SeenPaths) {
-                SeenPaths.Add(path);
-            }
-        }
-
-        private bool HasSeenPath(string path) {
-            lock (SeenPaths) {
-                return SeenPaths.Contains(path);
-            }
-        }
+        private static readonly HashSet<string> pathCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private int GetFileAndFolderCount(string folderPath) {
             try {
@@ -89,31 +75,7 @@ namespace Listary.FileAppPlugin.FilePilot {
                 Keyboard.Type(VirtualKeyShort.KEY_V);
                 Keyboard.Release(VirtualKeyShort.CONTROL);
 
-                // Calculate file and folder count and set delay using scaling factor
-                int fileAndFolderCount = GetFileAndFolderCount(path);
-                int baseDelay = 40;
-                double scaleFactor = .018;
-                if (fileAndFolderCount > 1000) {
-                    scaleFactor = .1;
-                } else if (fileAndFolderCount > 500) {
-                    scaleFactor = .58;
-                } else if (fileAndFolderCount > 50) {
-                    scaleFactor = 1.3;
-                }
-
-                // If this path has been seen before, drastically reduce the scaling factor
-                if (HasSeenPath(path)) {
-                    scaleFactor = 0.001;
-                }
-
-                if (FilePilotTab.isFirstTime) {
-                    // First time opening a folder in File Pilot is slower, add extra delay
-                    baseDelay += 200;
-                    FilePilotTab.isFirstTime = false;
-                }
-                int delayMs = baseDelay + (int)(fileAndFolderCount * scaleFactor);
-
-                await Task.Delay(delayMs);
+                await Task.Delay(calculateDelay(path));
 
                 Keyboard.Type(VirtualKeyShort.RETURN);
 
@@ -134,6 +96,35 @@ namespace Listary.FileAppPlugin.FilePilot {
                 }
                 return false;
             }
+        }
+
+        private int calculateDelay(string path) {
+            int baseDelay = 40;
+            if (!pathCache.Contains(path)) {
+                pathCache.Add(path);
+
+                // First time opening a folder in File Pilot is slower, add extra delay
+                baseDelay += 200;
+            }
+
+            // Calculate file and folder count and set delay using scaling factor
+            int fileAndFolderCount = GetFileAndFolderCount(path);
+            double scaleFactor;
+
+            if (fileAndFolderCount > 1000) {
+                scaleFactor = .1;
+            }
+            else if (fileAndFolderCount > 500) {
+                scaleFactor = .58;
+            }
+            else if (fileAndFolderCount > 50) {
+                scaleFactor = 1.3;
+            }
+            else {
+                scaleFactor = .018;
+            }
+
+            return baseDelay + (int)(fileAndFolderCount * scaleFactor);
         }
 
         public void FocusFilePilotWindow(IntPtr hwnd) {
