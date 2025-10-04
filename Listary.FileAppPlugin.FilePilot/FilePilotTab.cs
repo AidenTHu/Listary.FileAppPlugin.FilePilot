@@ -4,6 +4,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Listary.FileAppPlugin.FilePilot {
     public class FilePilotTab : IFileTab, IGetFolder, IOpenFolder {
@@ -24,6 +25,22 @@ namespace Listary.FileAppPlugin.FilePilot {
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        private static readonly HashSet<string> SeenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly string _path;
+
+        public FilePilotTab(string path) {
+            _path = path;
+            lock (SeenPaths) {
+                SeenPaths.Add(path);
+            }
+        }
+
+        private bool HasSeenPath(string path) {
+            lock (SeenPaths) {
+                return SeenPaths.Contains(path);
+            }
+        }
 
         private int GetFileAndFolderCount(string folderPath) {
             try {
@@ -79,9 +96,14 @@ namespace Listary.FileAppPlugin.FilePilot {
                 if (fileAndFolderCount > 1000) {
                     scaleFactor = .1;
                 } else if (fileAndFolderCount > 500) {
-                    scaleFactor = .58  ;
+                    scaleFactor = .58;
                 } else if (fileAndFolderCount > 50) {
                     scaleFactor = 1.3;
+                }
+
+                // If this path has been seen before, drastically reduce the scaling factor
+                if (HasSeenPath(path)) {
+                    scaleFactor = 0.001;
                 }
 
                 if (FilePilotTab.isFirstTime) {

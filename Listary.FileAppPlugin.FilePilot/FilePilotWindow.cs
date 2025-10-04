@@ -10,7 +10,8 @@ namespace Listary.FileAppPlugin.FilePilot {
         public FilePilotWindow(IFileAppPluginHost host) { }
 
         public async Task<IFileTab> GetCurrentTab() {
-            return new FilePilotTab();
+            // Provide a valid path string as required by FilePilotTab's constructor
+            return new FilePilotTab("");
         }
     }
 }
