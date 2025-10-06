@@ -28,20 +28,6 @@ namespace Listary.FileAppPlugin.FilePilot {
 
         private static readonly HashSet<string> pathCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private int GetFileAndFolderCount(string folderPath) {
-            try {
-                if (!Directory.Exists(folderPath)) {
-                    return 0;
-                }
-
-                int fileCount = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
-                int folderCount = Directory.GetDirectories(folderPath, "*", SearchOption.TopDirectoryOnly).Length;
-                return fileCount + folderCount;
-            } catch {
-                return 0;
-            }
-        }
-
         public async Task<string> GetCurrentFolder() {
             // FilePilot does not expose the current folder via Windows Messages or Automation APIs.
             // Since there is no reliable way to get the current folder from File Pilot using SendKeys or MouseEvents, return null.
@@ -61,7 +47,7 @@ namespace Listary.FileAppPlugin.FilePilot {
                 // Sets the clipboard to the folder path
                 System.Windows.Clipboard.SetText(path);
 
-                FocusFilePilotWindow(FindWindow("File Pilot", null));
+                this.FocusFilePilotWindow(FindWindow("File Pilot", null));
 
                 // Opens the File Pilot folder path input box
                 Keyboard.Press(VirtualKeyShort.CONTROL);
@@ -75,7 +61,7 @@ namespace Listary.FileAppPlugin.FilePilot {
                 Keyboard.Type(VirtualKeyShort.KEY_V);
                 Keyboard.Release(VirtualKeyShort.CONTROL);
 
-                await Task.Delay(calculateDelay(path));
+                await Task.Delay(this.calculateDelay(path));
 
                 Keyboard.Type(VirtualKeyShort.RETURN);
 
