@@ -99,32 +99,13 @@ namespace Listary.FileAppPlugin.FilePilot {
         }
 
         private int calculateDelay(string path) {
-            int baseDelay = 40;
             if (!pathCache.Contains(path)) {
                 pathCache.Add(path);
-
                 // First time opening a folder in File Pilot is slower, add extra delay
-                baseDelay += 200;
+                return 200;
+            } else {
+                return 40;
             }
-
-            // Calculate file and folder count and set delay using scaling factor
-            int fileAndFolderCount = GetFileAndFolderCount(path);
-            double scaleFactor;
-
-            if (fileAndFolderCount > 1000) {
-                scaleFactor = .1;
-            }
-            else if (fileAndFolderCount > 500) {
-                scaleFactor = .58;
-            }
-            else if (fileAndFolderCount > 50) {
-                scaleFactor = 1.3;
-            }
-            else {
-                scaleFactor = .018;
-            }
-
-            return baseDelay + (int)(fileAndFolderCount * scaleFactor);
         }
 
         public void FocusFilePilotWindow(IntPtr hwnd) {
