@@ -2,6 +2,7 @@
 using FlaUI.Core.WindowsAPI;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -35,13 +36,22 @@ namespace Listary.FileAppPlugin.FilePilot {
         }
 
         public async Task<bool> OpenFolder(string path) {
-            string originalClipboard = null;
-            bool clipboardHasText = false;
+            string originalClipboard = null; 
+           StringCollection originalFileList = null;
             try {
                 // Save the current clipboard content
+                // Prefer preserving file-drop lists (copied files)
+                if (System.Windows.Clipboard.ContainsFileDropList()) {
+                    try {
+                        originalFileList = System.Windows.Clipboard.GetFileDropList();
+                    }
+                    catch {}
+                }
                 if (System.Windows.Clipboard.ContainsText()) {
-                    originalClipboard = System.Windows.Clipboard.GetText();
-                    clipboardHasText = true;
+                    try {
+                        originalClipboard = System.Windows.Clipboard.GetText();
+                    }
+                    catch {}
                 }
 
                 // Sets the clipboard to the folder path
@@ -64,23 +74,21 @@ namespace Listary.FileAppPlugin.FilePilot {
                 await Task.Delay(this.calculateDelay(path));
 
                 Keyboard.Type(VirtualKeyShort.RETURN);
-
-                // Restores the original clipboard content
-                if (clipboardHasText) {
-                    System.Windows.Clipboard.SetText(originalClipboard);
-                }
-
                 return true;
             }
             catch (Exception) {
-                // Attempts to restore clipboard even on error
-                if (clipboardHasText) {
-                    try {
+                return false;
+            }
+            finally {
+                try {
+                    if (originalClipboard != null) {
                         System.Windows.Clipboard.SetText(originalClipboard);
                     }
-                    catch { }
+                    if (originalFileList != null) {
+                        System.Windows.Clipboard.SetFileDropList(originalFileList);
+                    }
                 }
-                return false;
+                catch {}
             }
         }
 
