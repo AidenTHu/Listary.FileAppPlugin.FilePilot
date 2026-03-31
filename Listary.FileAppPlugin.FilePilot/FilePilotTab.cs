@@ -1,12 +1,10 @@
-﻿using FlaUI.Core.Input;
-using FlaUI.Core.WindowsAPI;
+﻿using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Shapes;
+using System.Windows.Forms;
 
 namespace Listary.FileAppPlugin.FilePilot {
     public class FilePilotTab : IFileTab, IGetFolder, IOpenFolder {
@@ -27,6 +25,8 @@ namespace Listary.FileAppPlugin.FilePilot {
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
+        // We'll use SendKeys to send keyboard shortcuts (no external dependencies)
+
         private static readonly HashSet<string> pathCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public async Task<string> GetCurrentFolder() {
@@ -35,45 +35,49 @@ namespace Listary.FileAppPlugin.FilePilot {
             return null;
         }
 
+        private static void RunOnSta(Action action) {
+            var t = new Thread(() => {
+                try { action(); }
+                catch { }
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+        }
+
         public async Task<bool> OpenFolder(string path) {
             string originalClipboard = null; 
-           StringCollection originalFileList = null;
+            StringCollection originalFileList = null;
             try {
-                // Save the current clipboard content
-                // Prefer preserving file-drop lists (copied files)
-                if (System.Windows.Clipboard.ContainsFileDropList()) {
+                // Save the current clipboard content on an STA thread
                     try {
-                        originalFileList = System.Windows.Clipboard.GetFileDropList();
+                    originalFileList = GetClipboardFileDropList();
                     }
-                    catch {}
-                }
-                if (System.Windows.Clipboard.ContainsText()) {
+                catch { originalFileList = null; }
+
                     try {
-                        originalClipboard = System.Windows.Clipboard.GetText();
+                    originalClipboard = GetClipboardText();
                     }
-                    catch {}
-                }
+                catch { originalClipboard = null; }
 
                 // Sets the clipboard to the folder path
-                System.Windows.Clipboard.SetText(path);
+                SetClipboardText(path);
 
                 this.FocusFilePilotWindow(FindWindow("File Pilot", null));
 
-                // Opens the File Pilot folder path input box
-                Keyboard.Press(VirtualKeyShort.CONTROL);
-                Keyboard.Type(VirtualKeyShort.KEY_L);
-                Keyboard.Release(VirtualKeyShort.CONTROL);
+                // Perform the keystrokes on an STA thread using SendKeys (requires STA)
+                RunOnSta(() => {
+                    // Opens the File Pilot folder path input box (Ctrl+L)
+                    System.Windows.Forms.SendKeys.SendWait("^l");
+                    Thread.Sleep(20);
 
-                await Task.Delay(20);
+                    // Pastes the path into the input box (Ctrl+V)
+                    System.Windows.Forms.SendKeys.SendWait("^v");
+                    Thread.Sleep(this.calculateDelay(path));
 
-                // Pastes the path into the input box
-                Keyboard.Press(VirtualKeyShort.CONTROL);
-                Keyboard.Type(VirtualKeyShort.KEY_V);
-                Keyboard.Release(VirtualKeyShort.CONTROL);
-
-                await Task.Delay(this.calculateDelay(path));
-
-                Keyboard.Type(VirtualKeyShort.RETURN);
+                    // Press Enter
+                    System.Windows.Forms.SendKeys.SendWait("{ENTER}");
+                });
                 return true;
             }
             catch (Exception) {
@@ -81,15 +85,65 @@ namespace Listary.FileAppPlugin.FilePilot {
             }
             finally {
                 try {
-                    if (originalClipboard != null) {
-                        System.Windows.Clipboard.SetText(originalClipboard);
-                    }
+                    // Prefer restoring file-drop list if it existed, otherwise restore text
                     if (originalFileList != null) {
-                        System.Windows.Clipboard.SetFileDropList(originalFileList);
+                        SetClipboardFileDropList(originalFileList);
+                    }
+                    else if (originalClipboard != null) {
+                        SetClipboardText(originalClipboard);
                     }
                 }
                 catch {}
             }
+        }
+
+        // Clipboard helpers that run on STA threads to avoid COM/clipboard apartment issues
+        private static string GetClipboardText() {
+            string result = null;
+            var t = new Thread(() => {
+                try {
+                    if (System.Windows.Forms.Clipboard.ContainsText()) result = System.Windows.Forms.Clipboard.GetText();
+                }
+                catch { result = null; }
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            return result;
+        }
+
+        private static StringCollection GetClipboardFileDropList() {
+            StringCollection result = null;
+            var t = new Thread(() => {
+                try {
+                    if (System.Windows.Forms.Clipboard.ContainsFileDropList()) result = System.Windows.Forms.Clipboard.GetFileDropList();
+                }
+                catch { result = null; }
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            return result;
+        }
+
+        private static void SetClipboardText(string text) {
+            var t = new Thread(() => {
+                try { System.Windows.Forms.Clipboard.SetText(text); }
+                catch { }
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+        }
+
+        private static void SetClipboardFileDropList(StringCollection list) {
+            var t = new Thread(() => {
+                try { System.Windows.Forms.Clipboard.SetFileDropList(list); }
+                catch { }
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
         }
 
         private int calculateDelay(string path) {
